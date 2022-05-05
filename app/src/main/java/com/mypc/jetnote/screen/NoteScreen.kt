@@ -1,24 +1,29 @@
 package com.mypc.jetnote.screen
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -36,7 +41,7 @@ import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
 
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialApi::class)
 @Composable
 fun NoteScreen(
     notes:List<Note>,
@@ -104,19 +109,71 @@ fun NoteScreen(
 
         LazyColumn {
 
-            items(notes){ note ->
+            itemsIndexed(items = notes,key = {
+                index,item ->
+                item.hashCode()
+            }){ index,note ->
                 val coroutineScope = rememberCoroutineScope()
                 var showed by remember {
                     mutableStateOf(false)
                 }
-                NoteRow(note = note, onNoteClicked = {
-                    showed = false
-                    coroutineScope.launch {
-                        delay(100)
-                        onRemoveNote(note)
-                    }
 
-                }, visible = showed)
+                val dismissState = rememberDismissState(
+                    confirmStateChange = {
+                        if(it == DismissValue.DismissedToEnd){
+                            onRemoveNote(note)
+                            Log.d("removed note","Note ${note.title} removed")
+                            true
+                        }else
+                            false
+
+                    }
+                )
+
+                SwipeToDismiss(
+                    state = dismissState,
+                    directions = setOf(DismissDirection.StartToEnd),
+                    background = {
+                        val direction = dismissState.dismissDirection?:return@SwipeToDismiss
+                        val color by animateColorAsState(targetValue = when(dismissState.targetValue){
+                            DismissValue.Default -> Color.LightGray
+                            DismissValue.DismissedToEnd -> Color.Blue
+                            DismissValue.DismissedToStart ->Color.LightGray
+                        })
+                        val icon = when(direction){
+                            DismissDirection.StartToEnd -> Icons.Default.Done
+                            DismissDirection.EndToStart -> Icons.Default.Delete
+
+                        }
+                        val scale by animateFloatAsState(
+                            targetValue =
+                            if(dismissState.targetValue == DismissValue.Default) 0.8f else 1.2f)
+                        val alignment = when(direction){
+                            DismissDirection.EndToStart -> Alignment.CenterEnd
+                            DismissDirection.StartToEnd -> Alignment.CenterStart
+                        }
+                        Box(modifier = Modifier
+                            .fillMaxSize()
+                            .background(color)
+                            .padding(start = 12.dp, end = 12.dp),
+                            contentAlignment = alignment){
+                            Icon(icon, contentDescription ="Icon",Modifier.scale(scale))
+                        }
+                    },
+                    dismissContent = {
+                        NoteRow(note = note, onNoteClicked = {
+                            showed = false
+                            coroutineScope.launch {
+                                delay(100)
+                                onRemoveNote(note)
+                            }
+
+                        }, visible = showed)
+
+
+                    })
+
+
                 coroutineScope.launch {
                     delay(100)
                     showed = true
@@ -161,9 +218,9 @@ fun NoteRow(
             elevation = 6.dp) {
             Column(
                 modifier
-                    .clickable {
+                    /*.clickable {
                         onNoteClicked(note)
-                    }
+                    }*/
                     .padding(
                         horizontal = 14.dp,
                         vertical = 6.dp
