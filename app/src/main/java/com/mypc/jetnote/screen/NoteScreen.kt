@@ -1,7 +1,10 @@
 package com.mypc.jetnote.screen
 
 import android.widget.Toast
-import androidx.compose.animation.defaultDecayAnimationSpec
+import androidx.compose.animation.*
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,17 +21,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.mypc.jetnote.R
 import com.mypc.jetnote.components.NoteButton
 import com.mypc.jetnote.components.NoteInputText
 import com.mypc.jetnote.data.NotesDataSource
 import com.mypc.jetnote.model.Note
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NoteScreen(
     notes:List<Note>,
@@ -95,11 +103,24 @@ fun NoteScreen(
         Divider(modifier = Modifier.padding(10.dp) )
 
         LazyColumn {
-            items(notes){
-                note ->
+
+            items(notes){ note ->
+                val coroutineScope = rememberCoroutineScope()
+                var showed by remember {
+                    mutableStateOf(false)
+                }
                 NoteRow(note = note, onNoteClicked = {
-                    onRemoveNote(note)
-                })
+                    showed = false
+                    coroutineScope.launch {
+                        delay(100)
+                        onRemoveNote(note)
+                    }
+
+                }, visible = showed)
+                coroutineScope.launch {
+                    delay(100)
+                    showed = true
+                }
             }
         }
 
@@ -107,16 +128,35 @@ fun NoteScreen(
 
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun NoteRow(
     modifier:Modifier = Modifier,
     note:Note,
+    visible:Boolean,
     onNoteClicked: (Note) -> Unit){
-    Surface(
-        modifier
-            .padding(4.dp)
-            .clip(RoundedCornerShape(topEnd = 33.dp, bottomStart = 33.dp))
-            .fillMaxWidth(),
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideIn(initialOffset = {fullSize->
+            IntOffset(x = fullSize.width/2,y = 0)
+        },
+            animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+        ),
+        exit = slideOut(
+            targetOffset = {
+                fullSize ->
+                IntOffset(-fullSize.width/2,0)
+            },
+            animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing)
+        )
+
+    ) {
+        Surface(
+            modifier
+                .padding(4.dp)
+                .clip(RoundedCornerShape(topEnd = 33.dp, bottomStart = 33.dp))
+                .fillMaxWidth()
+                .animateEnterExit(enter = slideInHorizontally(), exit = slideOutHorizontally()),
             color = Color(color = 0xFFDFE6EB),
             elevation = 6.dp) {
             Column(
@@ -128,16 +168,16 @@ fun NoteRow(
                         horizontal = 14.dp,
                         vertical = 6.dp
                     ),
-                    horizontalAlignment = Alignment.Start) {
-                    Text(text = note.title,style = MaterialTheme.typography.subtitle2)
-                    Text(text = note.title,style = MaterialTheme.typography.subtitle1)
-                    Text(text = note.entryDate.format(DateTimeFormatter.ofPattern("EEE,d MMM"))
-                        ,style = MaterialTheme.typography.caption)
+                horizontalAlignment = Alignment.Start) {
+                Text(text = note.title,style = MaterialTheme.typography.subtitle2)
+                Text(text = note.title,style = MaterialTheme.typography.subtitle1)
+                Text(text = note.entryDate.format(DateTimeFormatter.ofPattern("EEE,d MMM"))
+                    ,style = MaterialTheme.typography.caption)
+            }
 
+        }
+    }
 
-                    }
-        
-                }
     }
 
 
@@ -145,4 +185,5 @@ fun NoteRow(
 @Composable
 fun NotesScreenPreview() {
     NoteScreen(notes = NotesDataSource().loadNotes(), onAddNote = {}, onRemoveNote = {})
+
 }

@@ -9,5 +9,6 @@ data class Note @RequiresApi(Build.VERSION_CODES.O) constructor(
     val id:UUID = UUID.randomUUID(),
     val title:String,
     val description:String,
-    val entryDate: LocalDateTime = LocalDateTime.now()
-)
+    val entryDate: LocalDateTime = LocalDateTime.now())
+
+

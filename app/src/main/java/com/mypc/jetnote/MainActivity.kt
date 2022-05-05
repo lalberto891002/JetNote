@@ -8,13 +8,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.mypc.jetnote.model.Note
 import com.mypc.jetnote.screen.NoteScreen
 import com.mypc.jetnote.screen.NoteViewModel
 import com.mypc.jetnote.ui.theme.JetNoteTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,15 +41,19 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NotesApp(notesViewModel: NoteViewModel = viewModel()){
-    val notesList = notesViewModel.getAllNotes()
+
+    var notesList = notesViewModel.getAllNotes()
     NoteScreen(
         notes = notesList,
         onRemoveNote = {
             notesViewModel.removeNote(it)
+
                     },
         onAddNote = {
             notesViewModel.addNote(it)
+
         })
+
 }
 
 
