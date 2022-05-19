@@ -16,9 +16,12 @@ import com.mypc.jetnote.model.Note
 import com.mypc.jetnote.screen.NoteScreen
 import com.mypc.jetnote.screen.NoteViewModel
 import com.mypc.jetnote.ui.theme.JetNoteTheme
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +45,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun NotesApp(notesViewModel: NoteViewModel = viewModel()){
 
-    var notesList = notesViewModel.getAllNotes()
+    var notesList = notesViewModel.noteList.collectAsState().value
     NoteScreen(
         notes = notesList,
         onRemoveNote = {
@@ -52,7 +55,10 @@ fun NotesApp(notesViewModel: NoteViewModel = viewModel()){
         onAddNote = {
             notesViewModel.addNote(it)
 
-        })
+        },
+    onUpdateNote = {
+        notesViewModel.updateNote(it)
+    })
 
 }
 

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -36,6 +38,7 @@ import com.mypc.jetnote.components.NoteButton
 import com.mypc.jetnote.components.NoteInputText
 import com.mypc.jetnote.data.NotesDataSource
 import com.mypc.jetnote.model.Note
+import com.mypc.jetnote.util.formatDate
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
@@ -46,7 +49,8 @@ import java.time.format.DateTimeFormatter
 fun NoteScreen(
     notes:List<Note>,
     onAddNote:(Note) -> Unit,
-    onRemoveNote:(Note) -> Unit
+    onRemoveNote:(Note) -> Unit,
+    onUpdateNote:(Note) -> Unit
 ){
     var title by remember{
         mutableStateOf(" ")
@@ -54,6 +58,18 @@ fun NoteScreen(
 
     var description by remember {
         mutableStateOf("")
+    }
+
+    var updating by remember {
+        mutableStateOf(false)
+    }
+
+    var note_id by remember {
+        mutableStateOf("")
+    }
+
+    var noteMem  by remember {
+        mutableStateOf(Note(title = "", description = ""))
     }
 
     val context = LocalContext.current
@@ -93,16 +109,37 @@ fun NoteScreen(
                     bottom = 8.dp
                 )
             )
-            NoteButton(text = "Save", onClick = { /*TODO*/
-                                                    if(title.isNotEmpty() && description.isNotEmpty()){
-                                                        onAddNote(Note(title = title, description = description))
-                                                        Toast.makeText(context,
-                                                            "Added note with title:$title",
-                                                        Toast.LENGTH_LONG).show()
-                                                        title = ""
-                                                        description =""
-                                                    }
-                                                }, enabled = true )
+            if(!updating) {
+                NoteButton(text = "Save", onClick = {
+                    if (title.isNotEmpty() && description.isNotEmpty()) {
+                        onAddNote(Note(title = title, description = description))
+                        Toast.makeText(
+                            context,
+                            "Added note with title:$title",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        title = ""
+                        description = ""
+                    }
+                }, enabled = true)
+            }else {
+                NoteButton(text = "Update", onClick = {
+                    if (title.isNotEmpty() && description.isNotEmpty()) {
+
+                        noteMem.title = title
+                        noteMem.description = description
+                        onUpdateNote(noteMem)
+                        Toast.makeText(
+                            context,
+                            "Updated note with title:$title",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        title = ""
+                        description = ""
+                    }
+                    updating = false
+                }, enabled = true)
+            }
         }
 
         Divider(modifier = Modifier.padding(10.dp) )
@@ -117,10 +154,15 @@ fun NoteScreen(
                 var showed by remember {
                     mutableStateOf(false)
                 }
+                var deleted by remember {
+                    mutableStateOf(false)
+                }
 
                 val dismissState = rememberDismissState(
                     confirmStateChange = {
                         if(it == DismissValue.DismissedToEnd){
+                            showed = false
+                            deleted = true
                             onRemoveNote(note)
                             Log.d("removed note","Note ${note.title} removed")
                             true
@@ -162,21 +204,29 @@ fun NoteScreen(
                     },
                     dismissContent = {
                         NoteRow(note = note, onNoteClicked = {
-                            showed = false
+                           /* showed = false
                             coroutineScope.launch {
                                 delay(100)
                                 onRemoveNote(note)
-                            }
+                            }*/
 
-                        }, visible = showed)
+                        }, visible = showed, onNoteLongPressed = {
+                            noteMem = note
+                            title = noteMem.title
+                            description = noteMem.description
+                            note_id = noteMem.id.toString()
+                            updating = true
+
+                        })
 
 
                     })
 
+                coroutineScope.launch { //to show the note content delayed
 
-                coroutineScope.launch {
                     delay(100)
-                    showed = true
+                    if(!deleted)
+                        showed = true
                 }
             }
         }
@@ -191,7 +241,8 @@ fun NoteRow(
     modifier:Modifier = Modifier,
     note:Note,
     visible:Boolean,
-    onNoteClicked: (Note) -> Unit){
+    onNoteClicked: (Note) -> Unit,
+    onNoteLongPressed: (Note) -> Unit){
     AnimatedVisibility(
         visible = visible,
         enter = slideIn(initialOffset = {fullSize->
@@ -218,18 +269,31 @@ fun NoteRow(
             elevation = 6.dp) {
             Column(
                 modifier
-                    /*.clickable {
-                        onNoteClicked(note)
-                    }*/
+                    .clickable {
+                        //onNoteClicked(note)
+
+                    }
                     .padding(
                         horizontal = 14.dp,
                         vertical = 6.dp
-                    ),
+                    )
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = { /* Called when the gesture starts */ },
+                            onDoubleTap = { /* Called on Double Tap */ },
+                            onLongPress = {
+                                Log.d("noteLongPress", "Long pressed note ${note.title}")
+                                onNoteLongPressed(note)
+                            },
+                            onTap = { /* Called on Tap */ }
+                        )
+                    }
+                ,
                 horizontalAlignment = Alignment.Start) {
                 Text(text = note.title,style = MaterialTheme.typography.subtitle2)
-                Text(text = note.title,style = MaterialTheme.typography.subtitle1)
-                Text(text = note.entryDate.format(DateTimeFormatter.ofPattern("EEE,d MMM"))
-                    ,style = MaterialTheme.typography.caption)
+                Text(text = note.description,style = MaterialTheme.typography.subtitle1)
+                Text(text = formatDate(note.entryDate.time),
+                    style = MaterialTheme.typography.caption)
             }
 
         }
@@ -241,6 +305,6 @@ fun NoteRow(
 @Preview(showBackground = true)
 @Composable
 fun NotesScreenPreview() {
-    NoteScreen(notes = NotesDataSource().loadNotes(), onAddNote = {}, onRemoveNote = {})
+    NoteScreen(notes = NotesDataSource().loadNotes(), onAddNote = {}, onRemoveNote = {}, onUpdateNote = {})
 
 }
