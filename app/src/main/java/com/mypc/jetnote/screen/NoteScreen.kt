@@ -26,10 +26,12 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,7 +79,11 @@ fun NoteScreen(
     }
 
     val context = LocalContext.current
+
     val keyboardController = LocalSoftwareKeyboardController.current
+
+    val localFocusManager = LocalFocusManager.current
+
     Column(modifier = Modifier.padding(6.dp)) {
         TopAppBar(title = {
                           Text(text = stringResource(id = R.string.app_name))
@@ -98,7 +104,9 @@ fun NoteScreen(
                                 char.isLetter() || char.isWhitespace()
                             })  title = it
                     },
-                    onImeAction = {}
+                    onImeAction = {
+                        localFocusManager.moveFocus(FocusDirection.Down)
+                    }
                 )
 
             NoteInputText(text = description,label = "Add a Note",
@@ -108,6 +116,47 @@ fun NoteScreen(
                           })  description = it
                 },
                 onImeAction = {
+                    if(!updating) {
+                        if (title.isNotEmpty() && description.isNotEmpty()) {
+                            onAddNote(Note(title = title, description = description))
+                            Toast.makeText(
+                                context,
+                                "Added note with title:$title",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            title = ""
+                            description = ""
+
+                        }else {
+                            Toast.makeText(
+                                context,
+                                "Fill all data",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }else {
+                        if (title.isNotEmpty() && description.isNotEmpty()) {
+                            noteMem.title = title
+                            noteMem.description = description
+                            onUpdateNote(noteMem)
+                            Toast.makeText(
+                                context,
+                                "Updated note with title:$title",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            title = ""
+                            description = ""
+                        }else {
+                            Toast.makeText(
+                                context,
+                                "Fill all data",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        updating = false
+                    }
+
+
                     keyboardController?.hide()
                 },
                 modifier = Modifier.padding(

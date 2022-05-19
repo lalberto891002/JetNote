@@ -24,7 +24,6 @@ fun NoteInputText(modifier: Modifier = Modifier,
     maxLine:Int = 1,
     onTextChange:(String) -> Unit,
     onImeAction:() -> Unit){
-    val keyBoardController = LocalSoftwareKeyboardController.current
 
     TextField(
         value = text,
@@ -37,7 +36,7 @@ fun NoteInputText(modifier: Modifier = Modifier,
             imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = {
             onImeAction()
-            keyBoardController?.hide() }),
+             }),
         modifier = modifier
         )
 
