@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -44,7 +46,9 @@ import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
 
-@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialApi::class)
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterialApi::class,
+    ExperimentalComposeUiApi::class
+)
 @Composable
 fun NoteScreen(
     notes:List<Note>,
@@ -73,7 +77,7 @@ fun NoteScreen(
     }
 
     val context = LocalContext.current
-
+    val keyboardController = LocalSoftwareKeyboardController.current
     Column(modifier = Modifier.padding(6.dp)) {
         TopAppBar(title = {
                           Text(text = stringResource(id = R.string.app_name))
@@ -103,7 +107,9 @@ fun NoteScreen(
                               char.isLetter() || char.isWhitespace()
                           })  description = it
                 },
-                onImeAction = {},
+                onImeAction = {
+                    keyboardController?.hide()
+                },
                 modifier = Modifier.padding(
                     top = 9.dp,
                     bottom = 8.dp
@@ -120,6 +126,7 @@ fun NoteScreen(
                         ).show()
                         title = ""
                         description = ""
+                        keyboardController?.hide()
                     }
                 }, enabled = true)
             }else {
@@ -136,6 +143,7 @@ fun NoteScreen(
                         ).show()
                         title = ""
                         description = ""
+                        keyboardController?.hide()
                     }
                     updating = false
                 }, enabled = true)
